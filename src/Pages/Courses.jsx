@@ -1,19 +1,7 @@
-import { useEffect, useState } from "react"
 import CourseCard from "../Components/CourseCard"
-import { supabase } from "../Data/Supabase"
+import { courses } from "../Data/Courses"
 
 export function Courses() {
-    const [courses, setCourses] = useState([])
-
-    useEffect(() => {
-        getCourses()
-    }, [])
-
-    const getCourses = async () => {
-        const { data } = await supabase.from("courses").select("*").eq("dept", "webdesign")
-        setCourses(data)
-    }
-
     return (
         <>
             <h1>My Courses</h1>

@@ -5,7 +5,7 @@ import { useState } from "react"
 
 export function Lesson() {
     const { id, lessonid } = useParams()
-    const [courseLesson, setCourseLesson] = useState(courses.find((item) => item.id == id))
+    const [courseLesson] = useState(courses.find((item) => item.id == id))
     const [right] = useState(courseLesson.lessons.find((item) => item.id == lessonid))
     return (
         <>
