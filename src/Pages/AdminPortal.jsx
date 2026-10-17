@@ -32,6 +32,7 @@ function AdminPortal() {
   const [departmentList, setDepartmentList] = useState([])
   const [studentForm, setStudentForm] = useState(false)
   const [showStudentPassword, setShowStudentPassword] = useState(false)
+  const [changingStudentId, setChangingStudentId] = useState("")
   const [lessonForm, setLessonForm] = useState(false)
   const [departmentForm, setDepartmentForm] = useState(false)
   const [query, setQuery] = useState("")
@@ -49,7 +50,7 @@ function AdminPortal() {
     ])
     const firstError = studentResult.error || departmentResult.error || lessonResult.error
     if (firstError) throw firstError
-    const mappedStudents = (studentResult.data || []).map((row) => ({ ...row, id: row.student_id || row.id, name: row.full_name, department: row.department?.name || "Unassigned", created: new Date(row.created_at).toLocaleDateString() }))
+    const mappedStudents = (studentResult.data || []).map((row) => ({ ...row, profileId: row.id, id: row.student_id || row.id, name: row.full_name, department: row.department?.name || "Unassigned", created: new Date(row.created_at).toLocaleDateString() }))
     const mappedLessons = (lessonResult.data || []).map((row) => ({ ...row, date: new Date(row.created_at).toLocaleDateString(), video: row.video_url, department: row.department?.name || "Unassigned" }))
     setStudents(mappedStudents)
     setDepartmentList(departmentResult.data || [])
@@ -66,6 +67,21 @@ function AdminPortal() {
   }, [loadPortalData])
   const filteredStudents = useMemo(() => students.filter((person) => `${person.name} ${person.email} ${person.department} ${person.id}`.toLowerCase().includes(query.toLowerCase())), [students, query])
   const filteredLessons = useMemo(() => lessons.filter((item) => `${item.title} ${item.department} ${item.target_level || "all levels"}`.toLowerCase().includes(query.toLowerCase())), [lessons, query])
+
+  const changeStudentLevel = async (person, nextLevel) => {
+    const action = person.academic_level === "100" ? "promote" : "assign"
+    if (!window.confirm(`Are you sure you want to ${action} ${person.name} to ${nextLevel} Level?`)) return
+    setChangingStudentId(person.profileId)
+    const { error } = await supabase.from("profiles").update({ academic_level: nextLevel }).eq("id", person.profileId).eq("role", "student")
+    setChangingStudentId("")
+    if (error) {
+      setNotice(error.message || "Could not update the student's level.")
+    } else {
+      setStudents((current) => current.map((studentRow) => studentRow.profileId === person.profileId ? { ...studentRow, academic_level: nextLevel } : studentRow))
+      setNotice(`${person.name} is now in ${nextLevel} Level.`)
+    }
+    window.setTimeout(() => setNotice(""), 4500)
+  }
 
   const addStudent = async (event) => {
     event.preventDefault()
@@ -125,10 +141,10 @@ function AdminPortal() {
             <div className="overview-grid"><section className="panel department-panel"><div className="panel-heading"><div><h2>Departments</h2><p>Student groups at MITC</p></div><button className="quiet-button" onClick={() => setSection("Departments")}>Manage departments <Icon name="arrow"/></button></div><div className="department-list">{departmentList.slice(0,6).map((item,index)=><div className="department-row" key={item.id}><div className={`dept-mark dept-${index%4}`}>{item.name.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toUpperCase()}</div><span>{item.name}</span><strong>{students.filter((person)=>person.department===item.name).length.toString().padStart(2,"0")} <small>students</small></strong></div>)}</div></section>
               <section className="panel activity-panel"><div className="panel-heading"><div><h2>Recently shared</h2><p>Latest lessons for students</p></div><button className="icon-button" aria-label="View all lessons" onClick={()=>setSection("Lessons")}><Icon name="arrow"/></button></div><div className="mini-lessons">{lessons.slice(0,3).map((item)=><button className="mini-lesson" key={item.id} onClick={()=>setSection("Lessons")}><span className="mini-play"><Icon name="play"/></span><span className="mini-lesson-copy"><strong>{item.title}</strong><small>{item.department}</small></span><span className="mini-date">{item.date}</span></button>)}</div></section>
             </div>
-            <section className="panel recent-students"><div className="panel-heading"><div><h2>Recently added students</h2><p>New learners in your portal</p></div><button className="quiet-button" onClick={()=>setSection("Students")}>Manage students <Icon name="arrow"/></button></div><StudentTable students={students.slice(0,4)}/></section>
+            <section className="panel recent-students"><div className="panel-heading"><div><h2>Recently added students</h2><p>New learners in your portal</p></div><button className="quiet-button" onClick={()=>setSection("Students")}>Manage students <Icon name="arrow"/></button></div><StudentTable students={students.slice(0,4)} onChangeLevel={changeStudentLevel} changingStudentId={changingStudentId}/></section>
           </>}
 
-          {section === "Students" && <section className="panel directory-panel"><div className="directory-toolbar"><div className="search-box"><Icon name="search"/><input aria-label="Search students" placeholder="Search students..." value={query} onChange={(event)=>setQuery(event.target.value)}/></div><select aria-label="Filter students by department" onChange={(event)=>setQuery(event.target.value)}><option value="">All departments</option>{departmentList.map((item)=><option key={item.id}>{item.name}</option>)}</select><span className="result-count">{filteredStudents.length} students</span></div><StudentTable students={filteredStudents}/></section>}
+          {section === "Students" && <section className="panel directory-panel"><div className="directory-toolbar"><div className="search-box"><Icon name="search"/><input aria-label="Search students" placeholder="Search students..." value={query} onChange={(event)=>setQuery(event.target.value)}/></div><select aria-label="Filter students by department" onChange={(event)=>setQuery(event.target.value)}><option value="">All departments</option>{departmentList.map((item)=><option key={item.id}>{item.name}</option>)}</select><span className="result-count">{filteredStudents.length} students</span></div><StudentTable students={filteredStudents} onChangeLevel={changeStudentLevel} changingStudentId={changingStudentId}/></section>}
 
           {section === "Departments" && <section className="department-directory">{departmentList.map((item,index)=><article className="department-directory-card" key={item.id}><div className={`dept-mark dept-${index%4}`}>{item.name.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toUpperCase()}</div><h2>{item.name}</h2><p>Student accounts assigned</p><strong>{students.filter((person)=>person.department===item.name).length.toString().padStart(2,"0")} <small>students</small></strong></article>)}</section>}
 
@@ -145,8 +161,8 @@ function AdminPortal() {
   )
 }
 
-function StudentTable({ students }) {
-  return <div className="table-scroll"><table className="student-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>DEPARTMENT</th><th>LEVEL</th><th>ADDED</th><th></th></tr></thead><tbody>{students.map((person,index)=><tr key={`${person.id}-${index}`}><td><div className="student-cell"><span className={`student-avatar student-avatar-${index%4}`}>{person.name.split(" ").map((part)=>part[0]).join("").slice(0,2)}</span><span><strong>{person.name}</strong><small>{person.email}</small></span></div></td><td className="student-id">{person.id}</td><td><span className="department-chip">{person.department}</span></td><td>{person.academic_level ? `${person.academic_level} Level` : "Not set"}</td><td className="added-cell">{person.created}</td><td><button className="row-more" aria-label={`More options for ${person.name}`}>···</button></td></tr>)}</tbody></table>{students.length===0&&<div className="empty-state">No students found. Add a student to get started.</div>}</div>
+function StudentTable({ students, onChangeLevel, changingStudentId }) {
+  return <div className="table-scroll"><table className="student-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>DEPARTMENT</th><th>LEVEL / ACTION</th><th>ADDED</th></tr></thead><tbody>{students.map((person,index)=><tr key={`${person.id}-${index}`}><td><div className="student-cell"><span className={`student-avatar student-avatar-${index%4}`}>{person.name.split(" ").map((part)=>part[0]).join("").slice(0,2)}</span><span><strong>{person.name}</strong><small>{person.email}</small></span></div></td><td className="student-id">{person.id}</td><td><span className="department-chip">{person.department}</span></td><td className="level-action-cell"><span>{person.academic_level ? `${person.academic_level} Level` : "Not set"}</span>{person.academic_level !== "200" && <button type="button" className="level-action-button" disabled={changingStudentId === person.profileId} onClick={() => onChangeLevel(person, person.academic_level === "100" ? "200" : "100")}>{changingStudentId === person.profileId ? "Updating..." : person.academic_level === "100" ? "Promote to 200" : "Assign 100"}</button>}</td><td className="added-cell">{person.created}</td></tr>)}</tbody></table>{students.length===0&&<div className="empty-state">No students found. Add a student to get started.</div>}</div>
 }
 
 export { AdminPortal }
