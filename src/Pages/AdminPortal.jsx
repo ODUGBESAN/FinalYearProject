@@ -140,7 +140,11 @@ function AdminPortal() {
   }
 
   const title = section === "Students" ? "Students" : section === "Lessons" ? "Lessons & notes" : section === "Departments" ? "Departments" : "Overview"
-  const leavePortal = async () => { await signOut(); navigate("/login", { replace: true }) }
+  const leavePortal = async () => {
+    if (!window.confirm("Are you sure you want to sign out?")) return
+    await signOut()
+    navigate("/login", { replace: true })
+  }
   return (
     <div className="admin-app">
       <aside className="admin-sidebar">

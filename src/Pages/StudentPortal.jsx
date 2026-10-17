@@ -18,7 +18,11 @@ function StudentPortal() {
       })
       .catch((error) => setLoadError(error.message || "Could not load your lessons."))
   }, [])
-  const leavePortal = async () => { await signOut(); navigate("/login", { replace: true }) }
+  const leavePortal = async () => {
+    if (!window.confirm("Are you sure you want to sign out?")) return
+    await signOut()
+    navigate("/login", { replace: true })
+  }
 
   return <main className="student-app">
     <header className="student-topbar"><img src={logo} alt="Masroor International Technical College"/><div className="student-top-actions"><span>{student.department} · {student.academic_level ? `${student.academic_level} Level` : "Level not set"}</span><div className="student-top-avatar">{student.full_name.split(" ").map((part)=>part[0]).join("").slice(0,2)}</div><button onClick={leavePortal}>Sign out</button></div></header>
