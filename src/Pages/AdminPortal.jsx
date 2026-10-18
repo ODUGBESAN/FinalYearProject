@@ -40,6 +40,7 @@ function AdminPortal() {
   const [lessonForm, setLessonForm] = useState(false)
   const [editingLessonId, setEditingLessonId] = useState("")
   const [departmentForm, setDepartmentForm] = useState(false)
+  const [deletingDepartmentId, setDeletingDepartmentId] = useState("")
   const [query, setQuery] = useState("")
   const [notice, setNotice] = useState("")
   const [student, setStudent] = useState({ name: "", email: "", password: "", department_id: "", academic_level: "100" })
@@ -212,6 +213,32 @@ function AdminPortal() {
     window.setTimeout(() => setNotice(""), 3500)
   }
 
+  const deleteDepartment = async (department) => {
+    const studentCount = students.filter((person) => person.department_id === department.id).length
+    const lessonCount = lessons.filter((item) => item.department_id === department.id).length
+    if (studentCount || lessonCount) {
+      setNotice(`Cannot delete ${department.name}: it still has ${studentCount} student${studentCount === 1 ? "" : "s"} and ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}. Reassign or remove them first.`)
+      window.setTimeout(() => setNotice(""), 6000)
+      return
+    }
+    if (!window.confirm(`Delete the ${department.name} department? This cannot be undone.`)) return
+
+    setDeletingDepartmentId(department.id)
+    const { data, error } = await supabase.functions.invoke("delete-department", { body: { department_id: department.id } })
+    setDeletingDepartmentId("")
+    if (error || data?.error) {
+      setNotice(data?.error || error?.message || "Could not delete the department.")
+      window.setTimeout(() => setNotice(""), 6000)
+      return
+    }
+
+    setDepartmentList((current) => current.filter((item) => item.id !== department.id))
+    setStudent((current) => ({ ...current, department_id: current.department_id === department.id ? "" : current.department_id }))
+    setLesson((current) => ({ ...current, department_id: current.department_id === department.id ? "" : current.department_id }))
+    setNotice(`${department.name} department deleted.`)
+    window.setTimeout(() => setNotice(""), 4000)
+  }
+
   const title = section === "Students" ? "Students" : section === "Lessons" ? "Lessons & notes" : section === "Departments" ? "Departments" : "Overview"
   const leavePortal = async () => {
     if (!window.confirm("Are you sure you want to sign out?")) return
@@ -246,7 +273,7 @@ function AdminPortal() {
 
           {section === "Students" && <section className="panel directory-panel"><div className="directory-toolbar"><div className="search-box"><Icon name="search"/><input aria-label="Search students" placeholder="Search students..." value={query} onChange={(event)=>setQuery(event.target.value)}/></div><select aria-label="Filter students by department" onChange={(event)=>setQuery(event.target.value)}><option value="">All departments</option>{departmentList.map((item)=><option key={item.id}>{item.name}</option>)}</select><span className="result-count">{filteredStudents.length} students</span></div><StudentTable students={filteredStudents} onChangeLevel={changeStudentLevel} changingStudentId={changingStudentId} onEditStudent={openStudentEditor} onDeleteStudent={deleteStudent} deletingStudentId={deletingStudentId}/></section>}
 
-          {section === "Departments" && <section className="department-directory">{departmentList.map((item,index)=><article className="department-directory-card" key={item.id}><div className={`dept-mark dept-${index%4}`}>{item.name.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toUpperCase()}</div><h2>{item.name}</h2><p>Student accounts assigned</p><strong>{students.filter((person)=>person.department===item.name).length.toString().padStart(2,"0")} <small>students</small></strong></article>)}</section>}
+          {section === "Departments" && <section className="department-directory">{departmentList.map((item,index)=>{const studentCount=students.filter((person)=>person.department_id===item.id).length;const lessonCount=lessons.filter((lessonItem)=>lessonItem.department_id===item.id).length;return <article className="department-directory-card" key={item.id}><div className="department-card-heading"><div className={`dept-mark dept-${index%4}`}>{item.name.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toUpperCase()}</div><button type="button" className="department-delete-button" disabled={deletingDepartmentId===item.id} onClick={()=>deleteDepartment(item)} aria-label={`Delete ${item.name} department`}>{deletingDepartmentId===item.id?"Deleting…":"Delete"}</button></div><h2>{item.name}</h2><p>Student accounts assigned</p><strong>{studentCount.toString().padStart(2,"0")} <small>students</small></strong><small className="department-lesson-count">{lessonCount} lesson{lessonCount===1?"":"s"}</small></article>})}</section>}
 
           {section === "Lessons" && <section className="lesson-library">{filteredLessons.map((item)=><article className="lesson-card" key={item.id}><div className="lesson-card-top"><span className="lesson-type"><Icon name="note"/> CLASS NOTES + VIDEO</span><div className="lesson-card-actions"><span className="lesson-date">{item.date}</span><button type="button" className="lesson-edit-button" onClick={() => openLessonEditor(item)}>Edit</button></div></div><h2>{item.title}</h2><span className="lesson-dept">{item.department} · {item.target_level ? `${item.target_level} Level` : "All Levels"}</span><p>{item.notes}</p><div className="lesson-card-footer"><a href={item.video} target="_blank" rel="noreferrer"><span className="play-dot"><Icon name="play"/></span> Watch lesson <Icon name="arrow"/></a><span>Shared with {item.target_level ? `${item.target_level} Level` : "all levels"}</span></div></article>)}{filteredLessons.length===0&&<div className="empty-state">No lessons match that search yet.</div>}</section>}
           {dataError && <div className="login-error">{dataError}</div>}
