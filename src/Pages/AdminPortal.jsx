@@ -19,6 +19,7 @@ function Icon({ name }) {
     play: <><path d="m8 5 12 7-12 7z"/></>,
     note: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></>,
     menu: <><path d="M4 6h16M4 12h16M4 18h16"/></>,
+    close: <><path d="m18 6-12 12M6 6l12 12"/></>,
   }
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>
 }
@@ -27,6 +28,7 @@ function AdminPortal() {
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
   const [section, setSection] = useState("Overview")
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [students, setStudents] = useState([])
   const [lessons, setLessons] = useState([])
   const [departmentList, setDepartmentList] = useState([])
@@ -246,18 +248,19 @@ function AdminPortal() {
     navigate("/login", { replace: true })
   }
   return (
-    <div className="admin-app">
+    <div className={`admin-app${mobileNavOpen ? " mobile-nav-open" : ""}`}>
       <aside className="admin-sidebar">
         <a href="#overview" className="admin-brand"><img src={logo} alt="MITC" /></a>
         <div className="workspace-label">LEARNING PORTAL</div>
         <div className="side-links">
-          {[ ["Overview", "overview"], ["Students", "students"], ["Departments", "departments"], ["Lessons", "lessons"] ].map(([label, icon]) => <button key={label} className={`side-link ${section === label ? "active" : ""}`} onClick={() => { setSection(label); setQuery("") }}><Icon name={icon}/><span>{label}</span>{label === "Students" && <small>{students.length}</small>}</button>)}
+          {[ ["Overview", "overview"], ["Students", "students"], ["Departments", "departments"], ["Lessons", "lessons"] ].map(([label, icon]) => <button key={label} className={`side-link ${section === label ? "active" : ""}`} onClick={() => { setSection(label); setQuery(""); setMobileNavOpen(false) }}><Icon name={icon}/><span>{label}</span>{label === "Students" && <small>{students.length}</small>}</button>)}
         </div>
         <div className="sidebar-bottom"><div className="preview-label"><span className="live-dot"/> Supabase connected</div><div className="admin-profile"><div className="avatar">{profile.full_name?.[0] || "A"}</div><div><strong>{profile.full_name}</strong><span>Administrator</span></div><button className="profile-menu" onClick={leavePortal}>Sign out</button></div></div>
       </aside>
 
       <main className="admin-main">
-        <header className="admin-topbar"><button className="mobile-menu" aria-label="Open menu"><Icon name="menu"/></button><div className="breadcrumb">MITC <span>/</span> <strong>{title}</strong></div><div className="topbar-right"><span className="topbar-date">Friday, October 16, 2026</span><div className="avatar small-avatar">{profile.full_name?.[0] || "A"}</div><button className="top-signout" onClick={leavePortal}>Sign out</button></div></header>
+        {mobileNavOpen && <button type="button" className="mobile-nav-backdrop" aria-label="Close navigation menu" onClick={() => setMobileNavOpen(false)}/>}
+        <header className="admin-topbar"><button className="mobile-menu" aria-label={mobileNavOpen ? "Close menu" : "Open menu"} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen((open) => !open)}><Icon name={mobileNavOpen ? "close" : "menu"}/></button><div className="breadcrumb">MITC <span>/</span> <strong>{title}</strong></div><div className="topbar-right"><span className="topbar-date">Friday, October 16, 2026</span><div className="avatar small-avatar">{profile.full_name?.[0] || "A"}</div><button className="top-signout" onClick={leavePortal}>Sign out</button></div></header>
         <div className="admin-content">
           <div className="page-heading"><div><div className="welcome-label">MASROOR INTERNATIONAL TECHNICAL COLLEGE</div><h1>{section === "Overview" ? `Good morning, ${profile.full_name?.split(" ")[0] || "Admin"}` : title}<span className="heading-period">.</span></h1><p>{section === "Overview" ? "Here’s what’s happening across your learning portal." : section === "Students" ? "Create student accounts and assign each learner a department and level." : section === "Departments" ? "Manage the departments students and lessons are assigned to." : "Share after-class notes and video lessons with a department and level."}</p></div>
             {section === "Students" ? <button className="primary-button" onClick={() => setStudentForm(true)}><Icon name="plus"/> Add student</button> : section === "Lessons" ? <button className="primary-button" onClick={startNewLesson}><Icon name="plus"/> Add lesson</button> : section === "Departments" ? <button className="primary-button" onClick={() => setDepartmentForm(true)}><Icon name="plus"/> Add department</button> : <button className="primary-button" onClick={() => setStudentForm(true)}><Icon name="plus"/> Create student</button>}

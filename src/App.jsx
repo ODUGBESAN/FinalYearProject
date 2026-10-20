@@ -10,6 +10,14 @@ function RoleRoute({ role, children }) {
   return profile?.role === role ? children : <Navigate to="/login" replace />
 }
 
+function HomeRoute() {
+  const { profile, loading } = useAuth()
+  if (loading) return <div className="auth-loading">Checking your MITC account…</div>
+  if (profile?.role === "admin") return <Navigate to="/admin" replace />
+  if (profile?.role === "student") return <Navigate to="/student" replace />
+  return <Navigate to="/login" replace />
+}
+
 function App() {
   return (
 
@@ -18,7 +26,7 @@ function App() {
       <BrowserRouter>
 
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<HomeRoute />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<RoleRoute role="admin"><AdminPortal /></RoleRoute>} />
           <Route path="/student" element={<RoleRoute role="student"><StudentPortal /></RoleRoute>} />
