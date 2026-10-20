@@ -22,6 +22,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<RoleRoute role="admin"><AdminPortal /></RoleRoute>} />
           <Route path="/student" element={<RoleRoute role="student"><StudentPortal /></RoleRoute>} />
+          <Route path="/student/past-lessons" element={<RoleRoute role="student"><StudentPortal /></RoleRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
