@@ -41,6 +41,7 @@ function AdminPortal() {
   const [changingStudentId, setChangingStudentId] = useState("")
   const [lessonForm, setLessonForm] = useState(false)
   const [editingLessonId, setEditingLessonId] = useState("")
+  const [deletingLessonId, setDeletingLessonId] = useState("")
   const [departmentForm, setDepartmentForm] = useState(false)
   const [deletingDepartmentId, setDeletingDepartmentId] = useState("")
   const [query, setQuery] = useState("")
@@ -204,6 +205,28 @@ function AdminPortal() {
     window.setTimeout(() => setNotice(""), 3500)
   }
 
+  const deleteLesson = async (lessonItem) => {
+    if (!window.confirm(`Delete “${lessonItem.title}”? Students will no longer be able to access this lesson. This cannot be undone.`)) return
+
+    setDeletingLessonId(lessonItem.id)
+    const { data, error } = await supabase
+      .from("lessons")
+      .delete()
+      .eq("id", lessonItem.id)
+      .select("id")
+      .maybeSingle()
+    setDeletingLessonId("")
+    if (error || !data) {
+      setNotice(error?.message || "Could not delete the lesson. Check that you are signed in as an administrator.")
+      window.setTimeout(() => setNotice(""), 5000)
+      return
+    }
+
+    setLessons((current) => current.filter((item) => item.id !== lessonItem.id))
+    setNotice(`“${lessonItem.title}” was deleted.`)
+    window.setTimeout(() => setNotice(""), 4000)
+  }
+
   const addDepartment = async (event) => {
     event.preventDefault()
     const { data, error } = await supabase.from("departments").insert({ name: departmentName.trim() }).select("id, name").single()
@@ -278,7 +301,7 @@ function AdminPortal() {
 
           {section === "Departments" && <section className="department-directory">{departmentList.map((item,index)=>{const studentCount=students.filter((person)=>person.department_id===item.id).length;const lessonCount=lessons.filter((lessonItem)=>lessonItem.department_id===item.id).length;return <article className="department-directory-card" key={item.id}><div className="department-card-heading"><div className={`dept-mark dept-${index%4}`}>{item.name.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toUpperCase()}</div><button type="button" className="department-delete-button" disabled={deletingDepartmentId===item.id} onClick={()=>deleteDepartment(item)} aria-label={`Delete ${item.name} department`}>{deletingDepartmentId===item.id?"Deleting…":"Delete"}</button></div><h2>{item.name}</h2><p>Student accounts assigned</p><strong>{studentCount.toString().padStart(2,"0")} <small>students</small></strong><small className="department-lesson-count">{lessonCount} lesson{lessonCount===1?"":"s"}</small></article>})}</section>}
 
-          {section === "Lessons" && <section className="lesson-library">{filteredLessons.map((item)=><article className="lesson-card" key={item.id}><div className="lesson-card-top"><span className="lesson-type"><Icon name="note"/> CLASS NOTES + VIDEO</span><div className="lesson-card-actions"><span className="lesson-date">{item.date}</span><button type="button" className="lesson-edit-button" onClick={() => openLessonEditor(item)}>Edit</button></div></div><h2>{item.title}</h2><span className="lesson-dept">{item.department} · {item.target_level ? `${item.target_level} Level` : "All Levels"}</span><p>{item.notes}</p><div className="lesson-card-footer"><a href={item.video} target="_blank" rel="noreferrer"><span className="play-dot"><Icon name="play"/></span> Watch lesson <Icon name="arrow"/></a><span>Shared with {item.target_level ? `${item.target_level} Level` : "all levels"}</span></div></article>)}{filteredLessons.length===0&&<div className="empty-state">No lessons match that search yet.</div>}</section>}
+          {section === "Lessons" && <section className="lesson-library">{filteredLessons.map((item)=><article className="lesson-card" key={item.id}><div className="lesson-card-top"><span className="lesson-type"><Icon name="note"/> CLASS NOTES + VIDEO</span><div className="lesson-card-actions"><span className="lesson-date">{item.date}</span><button type="button" className="lesson-edit-button" onClick={() => openLessonEditor(item)}>Edit</button><button type="button" className="lesson-delete-button" disabled={deletingLessonId===item.id} onClick={() => deleteLesson(item)}>{deletingLessonId===item.id?"Deleting…":"Delete"}</button></div></div><h2>{item.title}</h2><span className="lesson-dept">{item.department} · {item.target_level ? `${item.target_level} Level` : "All Levels"}</span><p>{item.notes}</p><div className="lesson-card-footer"><a href={item.video} target="_blank" rel="noreferrer"><span className="play-dot"><Icon name="play"/></span> Watch lesson <Icon name="arrow"/></a><span>Shared with {item.target_level ? `${item.target_level} Level` : "all levels"}</span></div></article>)}{filteredLessons.length===0&&<div className="empty-state">No lessons match that search yet.</div>}</section>}
           {dataError && <div className="login-error">{dataError}</div>}
         </div>
       </main>
