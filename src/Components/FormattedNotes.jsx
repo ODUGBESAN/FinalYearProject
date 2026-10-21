@@ -1,11 +1,21 @@
 import "./FormattedNotes.css"
 
 function inlineContent(text, keyPrefix) {
-  return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((part, index) => {
+  return text.split(/(\*\*[^*]+\*\*|`[^`]+`|<\/?[a-z][^>]*>|<!DOCTYPE[^>]*>)/gi).filter(Boolean).map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) return <strong key={`${keyPrefix}-${index}`}>{part.slice(2, -2)}</strong>
     if (part.startsWith("`") && part.endsWith("`")) return <code key={`${keyPrefix}-${index}`}>{part.slice(1, -1)}</code>
+    if (part.startsWith("<") && part.endsWith(">")) return <code key={`${keyPrefix}-${index}`}>{part}</code>
     return <span key={`${keyPrefix}-${index}`}>{part}</span>
   })
+}
+
+function isCodeLine(line) {
+  const trimmed = line.trim()
+  return /^<\/?[a-z][^>]*>$|^<!DOCTYPE[^>]*>$|^<[a-z][^>]*>.*<\/[a-z][^>]*>$/i.test(trimmed)
+    || /^[.#]?[a-z][\w-]*\s*\{$/.test(trimmed)
+    || /^\s{2,}[\w-]+\s*:\s*[^:]+;?\s*$/.test(line)
+    || /^[a-z-]+\s*:\s*[^:;]+;\s*$/.test(trimmed)
+    || /^\}$/.test(trimmed)
 }
 
 function FormattedNotes({ notes }) {
@@ -22,13 +32,28 @@ function FormattedNotes({ notes }) {
 
     if (line.startsWith("```") || line.startsWith("~~~")) {
       const fence = line.slice(0, 3)
+      if (index + 1 >= lines.length || !isCodeLine(lines[index + 1])) {
+        index += 1
+        continue
+      }
       const codeLines = []
       index += 1
-      while (index < lines.length && !lines[index].trim().startsWith(fence)) {
+      while (index < lines.length && !lines[index].trim().startsWith(fence) && (isCodeLine(lines[index]) || !lines[index].trim())) {
         codeLines.push(lines[index])
         index += 1
       }
-      if (index < lines.length) index += 1
+      if (index < lines.length && lines[index].trim().startsWith(fence)) index += 1
+      blocks.push(<pre className="formatted-notes-code" key={`code-${blocks.length}`}><code>{codeLines.join("\n")}</code></pre>)
+      continue
+    }
+
+    if (isCodeLine(line)) {
+      const codeLines = [lines[index]]
+      index += 1
+      while (index < lines.length && (isCodeLine(lines[index]) || (!lines[index].trim() && isCodeLine(lines[index + 1] || "")))) {
+        codeLines.push(lines[index])
+        index += 1
+      }
       blocks.push(<pre className="formatted-notes-code" key={`code-${blocks.length}`}><code>{codeLines.join("\n")}</code></pre>)
       continue
     }
@@ -57,10 +82,6 @@ function FormattedNotes({ notes }) {
 
     const paragraph = [line]
     index += 1
-    while (index < lines.length && lines[index].trim() && !/^(#{1,3})\s+/.test(lines[index].trim()) && !/^([-*]|\d+\.)\s+/.test(lines[index].trim()) && !/^(```|~~~)/.test(lines[index].trim())) {
-      paragraph.push(lines[index].trim())
-      index += 1
-    }
     blocks.push(<p key={`paragraph-${blocks.length}`}>{inlineContent(paragraph.join(" "), `paragraph-${blocks.length}`)}</p>)
   }
 
