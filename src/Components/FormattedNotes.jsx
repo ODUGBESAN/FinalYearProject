@@ -18,6 +18,23 @@ function isCodeLine(line) {
     || /^\}$/.test(trimmed)
 }
 
+function syntaxHighlightedLine(line, lineIndex) {
+  const tokens = line.split(/(<!DOCTYPE|<\/?[a-z][\w-]*|\/?\s*>|\b[a-zA-Z-]+(?==)|"[^"]*"|'[^']*')/gi).filter(Boolean)
+  return <span className="formatted-code-line" key={`line-${lineIndex}`}><span className="formatted-code-number" aria-hidden="true">{lineIndex + 1}</span><span className="formatted-code-source">{tokens.map((token, index) => {
+    let className = ""
+    if (/^<!DOCTYPE$/i.test(token) || /^<\/?[a-z]/i.test(token)) className = "code-token-tag"
+    else if (/^\/?\s*>$/.test(token)) className = "code-token-punctuation"
+    else if (/^[a-zA-Z-]+$/.test(token)) className = "code-token-attribute"
+    else if (/^["']/.test(token)) className = "code-token-string"
+    return className ? <span className={className} key={index}>{token}</span> : token
+  })}</span></span>
+}
+
+function codeEditor(code, key) {
+  const language = /<!DOCTYPE|<\/?(?:html|head|body|meta|title|h[1-6]|p|a|img|ul|ol|li|div|span)\b/i.test(code) ? "HTML" : "CODE"
+  return <div className="formatted-code-editor" role="region" aria-label={`${language} code example`} key={key}><div className="formatted-code-titlebar"><span className="formatted-code-lights"><i/><i/><i/></span><span>{language}</span></div><pre className="formatted-notes-code"><code>{code.split("\n").map(syntaxHighlightedLine)}</code></pre></div>
+}
+
 function FormattedNotes({ notes }) {
   const lines = String(notes || "").replace(/\r/g, "").split("\n")
   const blocks = []
@@ -43,7 +60,7 @@ function FormattedNotes({ notes }) {
         index += 1
       }
       if (index < lines.length && lines[index].trim().startsWith(fence)) index += 1
-      blocks.push(<pre className="formatted-notes-code" key={`code-${blocks.length}`}><code>{codeLines.join("\n")}</code></pre>)
+      blocks.push(codeEditor(codeLines.join("\n"), `code-${blocks.length}`))
       continue
     }
 
@@ -54,7 +71,7 @@ function FormattedNotes({ notes }) {
         codeLines.push(lines[index])
         index += 1
       }
-      blocks.push(<pre className="formatted-notes-code" key={`code-${blocks.length}`}><code>{codeLines.join("\n")}</code></pre>)
+      blocks.push(codeEditor(codeLines.join("\n"), `code-${blocks.length}`))
       continue
     }
 
