@@ -4,3 +4,4 @@
 .student-level-badge{display:inline-flex;align-items:center;border-radius:12px;background:#edf2f9;color:#496a9a;padding:3px 7px;font-size:8px!important;font-weight:700;letter-spacing:.2px!important;white-space:nowrap}.student-level-badge.past{background:#fff2e8;color:#ad6944}
 @media(max-width:500px){.student-section-heading{align-items:flex-start;flex-direction:column;gap:5px}.student-section-heading>small{font-size:10px}.student-top-actions{gap:6px}.student-top-actions>span{max-width:118px}.student-lesson{padding:16px}.student-lesson-meta{flex-wrap:wrap;gap:7px}.student-lesson-meta small{margin-left:auto}}
 @media(hover:none) and (pointer:coarse) and (max-width:1050px){.student-lesson-grid{grid-template-columns:1fr}.student-lessons,.student-footer{margin-left:5%;margin-right:5%}}
+.student-notes>strong{font-size:9px;color:#5d6d83}.student-notes .formatted-notes{margin-top:5px}.student-notes .formatted-notes strong{font-size:inherit;color:inherit}
